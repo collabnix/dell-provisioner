@@ -6,5 +6,6 @@
 .glide/
 *.swp
 *.swo
+tmp/
 vendor/
 bin/

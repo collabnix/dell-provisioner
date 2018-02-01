@@ -86,20 +86,11 @@ func execute() {
 	if *sanAddress == "" {
 		msgs = append(msgs, "San address must be specified")
 	}
-	if *sanPassword == "" {
-		msgs = append(msgs, "San password must be specified")
-	}
 	if *sanGroupName == "" {
 		msgs = append(msgs, "San group name must be specified")
 	}
 	if *smcliCommand == "" {
 		msgs = append(msgs, "Path to the smcli command")
-	} else {
-		info, _ := os.Stat(*smcliCommand)
-		mode := info.Mode()
-		if mode&0111 != 0 {
-			msgs = append(msgs, "The binary for smcli is not executable")
-		}
 	}
 
 	// Print all errors and exit if need be
