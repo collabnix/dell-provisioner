@@ -10,7 +10,7 @@ $(BIN):
 	mkdir -p $(BIN)
 
 vendor:
-	glide install -v
+	glide install -v --strip-vcs
 
 install:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install
