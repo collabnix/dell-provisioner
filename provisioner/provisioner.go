@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
+	"github.com/nmaupu/dell-provisioner/storage"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"strconv"
@@ -14,43 +15,39 @@ const (
 	DefaultFS = "ext4"
 )
 
+type dellProvisioner struct {
+	Identifier string
+	Config     storage.Config
+}
+
 var (
 	// dellProvisioner is an implem of controller.Provisioner
 	_ controller.Provisioner = &dellProvisioner{}
 )
 
-type dellProvisioner struct {
-	Identifier   string
-	SanAddress   string
-	SanGroupName string
-	SanPassword  string
-	SmcliCommand string
-}
-
-func New(identifier, sanAddress, sanGroupName, sanPassword, smcliCommand string) controller.Provisioner {
+func New(identifier string, config storage.Config) controller.Provisioner {
 	return &dellProvisioner{
-		Identifier:   identifier,
-		SanAddress:   sanAddress,
-		SanGroupName: sanGroupName,
-		SanPassword:  sanPassword,
-		SmcliCommand: smcliCommand,
-	}
-}
-
-// getAccessModes returns access modes iscsi volumes support
-func (p *dellProvisioner) getAccessModes() []v1.PersistentVolumeAccessMode {
-	return []v1.PersistentVolumeAccessMode{
-		v1.ReadWriteOnce,
-		v1.ReadOnlyMany,
+		Identifier: identifier,
+		Config:     config,
 	}
 }
 
 func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-	if !accessModesContainedInAll(p.getAccessModes(), options.PVC.Spec.AccessModes) {
-		return nil, fmt.Errorf("invalid AccessModes %v: only AccessModes %v are supported", options.PVC.Spec.AccessModes, p.getAccessModes())
+	if !accessModesContainedInAll(getAccessModes(), options.PVC.Spec.AccessModes) {
+		return nil, fmt.Errorf("invalid AccessModes %v: only AccessModes %v are supported", options.PVC.Spec.AccessModes, getAccessModes())
 	}
 
-	glog.Infoln("New provision request received for pvc: ", options.PVName)
+	glog.Infof(
+		"New provision request received for pvc: %s, capacity: %v",
+		options.PVName,
+		options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
+	)
+
+	// Effectively create the volume
+	p.Config.CreateVolume(
+		options.PVName,
+		options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
+	)
 
 	var portals []string
 	if len(options.Parameters["portals"]) > 0 {
@@ -61,7 +58,7 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
 			Annotations: map[string]string{
-				"dellProvisionerIdentifier": p.Identifier,
+				"DellProvisionerIdentifier": p.Identifier,
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
@@ -88,8 +85,16 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 }
 
 func (p *dellProvisioner) Delete(volume *v1.PersistentVolume) error {
-	fmt.Printf("Deleting %s, %s, %s\n", volume.Name, p.SanAddress, p.SanGroupName)
+	fmt.Println("Deleting: ", volume.Name)
 	return nil
+}
+
+// getAccessModes returns access modes iscsi volumes support
+func getAccessModes() []v1.PersistentVolumeAccessMode {
+	return []v1.PersistentVolumeAccessMode{
+		v1.ReadWriteOnce,
+		v1.ReadOnlyMany,
+	}
 }
 
 func getReadOnly(readonly string) bool {

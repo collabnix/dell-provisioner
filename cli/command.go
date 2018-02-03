@@ -7,6 +7,7 @@ import (
 	"github.com/jawher/mow.cli"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	dellProvisioner "github.com/nmaupu/dell-provisioner/provisioner"
+	"github.com/nmaupu/dell-provisioner/storage"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -16,22 +17,13 @@ import (
 )
 
 const (
-	provisionerName           = "nmaupu.org/dell-provisioner"
+	provisionerName           = "maupu.org/dell-provisioner"
 	exponentialBackOffOnError = false
 	failedRetryThreshold      = 5
 	leasePeriod               = controller.DefaultLeaseDuration
 	retryPeriod               = controller.DefaultRetryPeriod
 	renewDeadline             = controller.DefaultRenewDeadline
 	termLimit                 = controller.DefaultTermLimit
-)
-
-var (
-	// cli parameters
-	identifier                  *string
-	sanAddress                  *string
-	sanPassword                 *string
-	sanGroupName, sanVolumeName *string
-	smcliCommand                *string
 )
 
 func Process(appName, appDesc, appVersion string) {
@@ -41,81 +33,86 @@ func Process(appName, appDesc, appVersion string) {
 	app := cli.App(appName, appDesc)
 	app.Version("v version", fmt.Sprintf("%s version %s", appName, appVersion))
 
-	identifier = app.String(cli.StringOpt{
+	app.Command("smcli", "Provision volumes using smcli command", commandSmcli)
+
+	app.Run(os.Args)
+}
+
+// When using smcli command
+func commandSmcli(cmd *cli.Cmd) {
+	var (
+		msgs        []string
+		identifier  *string
+		smcliConfig storage.SmcliConfig
+	)
+
+	identifier = cmd.String(cli.StringOpt{
 		Name:   "i identifier",
 		Desc:   "Provisioner identifier (e.g. if ensure, set it to current node's name)",
 		EnvVar: "IDENTIFIER",
 	})
 
-	sanAddress = app.String(cli.StringOpt{
+	smcliConfig.SanAddress = cmd.String(cli.StringOpt{
 		Name:   "a sanAddress",
 		Desc:   "SAN address to connect to",
 		EnvVar: "SAN_ADDRESS",
 	})
 
-	sanPassword = app.String(cli.StringOpt{
+	smcliConfig.SanPassword = cmd.String(cli.StringOpt{
 		Name:   "p sanPassword",
 		Desc:   "SAN password",
 		EnvVar: "SAN_PASSWORD",
 	})
 
-	sanGroupName = app.String(cli.StringOpt{
+	smcliConfig.SanGroupName = cmd.String(cli.StringOpt{
 		Name:   "g sanGroupName",
 		Desc:   "SAN Group name",
 		EnvVar: "SAN_GROUP_NAME",
 	})
 
-	smcliCommand = app.String(cli.StringOpt{
+	smcliConfig.Command = cmd.String(cli.StringOpt{
 		Name:   "s smcliCommand",
+		Value:  "/opt/dell/mdstoragemanager/client/SMcli",
 		Desc:   "Path to the smcli command",
 		EnvVar: "SMCLI_COMMAND",
 	})
 
-	app.Action = execute
-	app.Run(os.Args)
+	cmd.Action = func() {
+		/* Params checking */
+		if *identifier == "" {
+			msgs = append(msgs, "Identifier must be specified")
+		}
+		if *smcliConfig.SanAddress == "" {
+			msgs = append(msgs, "San address must be specified")
+		}
+		if *smcliConfig.SanGroupName == "" {
+			msgs = append(msgs, "San group name must be specified")
+		}
+		if *smcliConfig.Command == "" {
+			msgs = append(msgs, "Path to the smcli command")
+		}
+		processErrors(msgs)
+
+		/* Everything's good so far, ready to start */
+		glog.Infoln("Starting dell-provisioner with the following parameters")
+		glog.Infof("  Identifier: %s", *identifier)
+		glog.Infof("  San address: %s", *smcliConfig.SanAddress)
+		glog.Infof("  San group name: %s", *smcliConfig.SanGroupName)
+		glog.Infof("  Smcli command: %s", *smcliConfig.Command)
+
+		// Execute with this particular config implem
+		execute(*identifier, &smcliConfig)
+	}
 }
 
-func execute() {
-	var err error
-
-	/* Params checking */
-	var msgs []string
-	if *identifier == "" {
-		msgs = append(msgs, "Identifier must be specified")
-	}
-	if *sanAddress == "" {
-		msgs = append(msgs, "San address must be specified")
-	}
-	if *sanGroupName == "" {
-		msgs = append(msgs, "San group name must be specified")
-	}
-	if *smcliCommand == "" {
-		msgs = append(msgs, "Path to the smcli command")
-	}
-
-	// Print all errors and exit if need be
-	if len(msgs) > 0 {
-		fmt.Fprintf(os.Stderr, "The following error(s) occured:\n")
-		for _, m := range msgs {
-			fmt.Fprintf(os.Stderr, "  - %s\n", m)
-		}
-		os.Exit(1)
-	}
-	/* End params checking */
-
-	/* Everything's good so far, ready to start */
-	glog.Infoln("Starting dell-provisioner with the following parameters")
-	glog.Infof("  Identifier: %s", *identifier)
-	glog.Infof("  San address: %s", *sanAddress)
-	glog.Infof("  San group name: %s", *sanGroupName)
-
+func execute(identifier string, provisionerConfig storage.Config) {
 	/* Creating Kubernetes cluster configuration */
-	config, err := rest.InClusterConfig()
+	k8sConfig, err := rest.InClusterConfig()
 	if err != nil {
 		glog.Fatalf("Failed to create config: %v", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(k8sConfig)
 	if err != nil {
 		glog.Fatalf("Failed to create client: %v", err)
 	}
@@ -127,11 +124,8 @@ func execute() {
 	}
 
 	clientDellProvisioner := dellProvisioner.New(
-		*identifier,
-		*sanAddress,
-		*sanPassword,
-		*sanGroupName,
-		*smcliCommand,
+		identifier,
+		provisionerConfig,
 	)
 
 	pc := controller.NewProvisionController(
@@ -147,5 +141,18 @@ func execute() {
 		retryPeriod,
 		termLimit,
 	)
+
+	// Starting the main thread
 	pc.Run(wait.NeverStop)
+}
+
+// Print all errors and exit
+func processErrors(msgs []string) {
+	if len(msgs) > 0 {
+		fmt.Fprintf(os.Stderr, "The following error(s) occured:\n")
+		for _, m := range msgs {
+			fmt.Fprintf(os.Stderr, "  - %s\n", m)
+		}
+		os.Exit(1)
+	}
 }
