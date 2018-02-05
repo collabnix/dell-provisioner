@@ -44,11 +44,16 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 	)
 
 	// Effectively create the volume
-	p.Config.CreateVolume(
+	err := p.Config.CreateVolume(
 		options.PVName,
 		options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
 	)
 
+	if err != nil {
+		return nil, fmt.Errorf("an error occured when creating the volume %s: %v", options.PVName, err.Error())
+	}
+
+	// Volume is now created
 	var portals []string
 	if len(options.Parameters["portals"]) > 0 {
 		portals = strings.Split(options.Parameters["portals"], ",")
@@ -85,7 +90,12 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 }
 
 func (p *dellProvisioner) Delete(volume *v1.PersistentVolume) error {
-	p.Config.DeleteVolume(volume.Name)
+	err := p.Config.DeleteVolume(volume.Name)
+
+	if err != nil {
+		return fmt.Errorf("an error occured when deleting the volume %s: %v", volume.Name, err.Error())
+	}
+
 	return nil
 }
 

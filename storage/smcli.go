@@ -1,10 +1,13 @@
 package storage
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"os/exec"
+	"syscall"
 )
 
 var (
@@ -42,12 +45,12 @@ func (c *SmcliConfig) GetSmcliCommand() string {
  */
 func (c *SmcliConfig) CreateVolume(label string, size resource.Quantity) error {
 	if size.IsZero() {
-		msg := "Size cannot be zero"
+		msg := "size cannot be zero"
 		glog.Errorln(msg)
 		return errors.New(msg)
 	}
 
-	glog.Infof("Creating disk %s in group %s, capacity=%v\n", label, c.GetSanGroupName(), size.Value())
+	glog.Infof("creating disk %s in group %s, capacity=%v\n", label, c.GetSanGroupName(), size.Value())
 
 	cmd := fmt.Sprintf(
 		"create virtualDisk diskGroup=\"%s\" userLabel=\"%s\" capacity=\"%d Bytes\"",
@@ -55,29 +58,67 @@ func (c *SmcliConfig) CreateVolume(label string, size resource.Quantity) error {
 		label,
 		size.Value())
 
-	return c.execute(&cmd)
+	err, _ := c.ExecuteSmcli(cmd)
+	return err
 }
 
 /**
  * Delete a volume using smcli command
  */
 func (c *SmcliConfig) DeleteVolume(label string) error {
-	cmd := fmt.Sprintf("delete virtualdisk [\"%s\"]", label)
-	return c.execute(&cmd)
+	cmd := fmt.Sprintf("deleting virtualdisk [\"%s\"]", label)
+	err, _ := c.ExecuteSmcli(cmd)
+	return err
 }
 
-// Executes arbitrary command via smcli config tool
+// Executes arbitrary command via smcli config tool and returns stdout
 // and handles error accordingly
-func (c *SmcliConfig) execute(cmd *string) error {
-	glog.Infof("Executing command to %s: %s\n", c.GetSanAddress(), *cmd)
+func (c *SmcliConfig) ExecuteSmcli(cmd string) (error, string) {
+	glog.Infof("executing command to %s: %s\n", c.GetSanAddress(), cmd)
 
 	passOpt := ""
 	if c.GetSanPassword() != "" {
 		passOpt = fmt.Sprintf("-p \"%s\"", c.GetSanPassword())
 	}
 
-	execCmd := fmt.Sprintf("%s %s -S %s -c '%s;'", c.GetSmcliCommand(), c.GetSanAddress(), passOpt, *cmd)
-	glog.Infof("Global command to execute: %s\n", execCmd)
+	exitCode, stdout, stderr := executeUnixCommand(
+		c.GetSmcliCommand(),
+		c.GetSanAddress(),
+		"-S",
+		passOpt,
+		"-c",
+		fmt.Sprintf("'%s;'", cmd))
 
-	return nil
+	if exitCode != 0 {
+		return errors.New(stderr), stdout
+	}
+
+	return nil, stdout
+}
+
+// Execute arbitrary unix command
+// returns exitCode, stdout, stderr
+func executeUnixCommand(c string, arg ...string) (int, string, string) {
+	exitCode := 0
+	cmd := exec.Command(c, arg...)
+
+	cmdStdout := &bytes.Buffer{}
+	cmdStderr := &bytes.Buffer{}
+
+	cmd.Stdout = cmdStdout
+	cmd.Stderr = cmdStderr
+
+	if err := cmd.Start(); err != nil {
+		panic(err.Error())
+	}
+
+	if err := cmd.Wait(); err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				exitCode = status.ExitStatus()
+			}
+		}
+	}
+
+	return exitCode, string(cmdStdout.Bytes()), string(cmdStderr.Bytes())
 }
