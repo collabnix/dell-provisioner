@@ -70,7 +70,7 @@ func commandSmcli(cmd *cli.Cmd) {
 		EnvVar: "SAN_GROUP_NAME",
 	})
 
-	smcliConfig.Command = cmd.String(cli.StringOpt{
+	smcliConfig.SmcliCommand = cmd.String(cli.StringOpt{
 		Name:   "s smcliCommand",
 		Value:  "/opt/dell/mdstoragemanager/client/SMcli",
 		Desc:   "Path to the smcli command",
@@ -88,7 +88,7 @@ func commandSmcli(cmd *cli.Cmd) {
 		if *smcliConfig.SanGroupName == "" {
 			msgs = append(msgs, "San group name must be specified")
 		}
-		if *smcliConfig.Command == "" {
+		if *smcliConfig.SmcliCommand == "" {
 			msgs = append(msgs, "Path to the smcli command")
 		}
 		processErrors(msgs)
@@ -98,7 +98,7 @@ func commandSmcli(cmd *cli.Cmd) {
 		glog.Infof("  Identifier: %s", *identifier)
 		glog.Infof("  San address: %s", *smcliConfig.SanAddress)
 		glog.Infof("  San group name: %s", *smcliConfig.SanGroupName)
-		glog.Infof("  Smcli command: %s", *smcliConfig.Command)
+		glog.Infof("  Smcli command: %s", *smcliConfig.SmcliCommand)
 
 		// Execute with this particular config implem
 		execute(*identifier, &smcliConfig)

@@ -85,7 +85,7 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 }
 
 func (p *dellProvisioner) Delete(volume *v1.PersistentVolume) error {
-	fmt.Println("Deleting: ", volume.Name)
+	p.Config.DeleteVolume(volume.Name)
 	return nil
 }
 
