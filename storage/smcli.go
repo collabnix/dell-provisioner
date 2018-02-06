@@ -14,6 +14,10 @@ var (
 	_ Config = &SmcliConfig{}
 )
 
+const (
+	DISKLABEL_MAX_LENGTH = 30
+)
+
 type SmcliConfig struct {
 	SanAddress   *string
 	SanGroupName *string
@@ -37,6 +41,11 @@ func (c *SmcliConfig) GetSmcliCommand() string {
 	return *c.SmcliCommand
 }
 
+// Dell supports disk label up to 30 chars
+func truncateDiskLabel(label string) string {
+	return label[0:DISKLABEL_MAX_LENGTH]
+}
+
 /**
  * Create a volume using smcli command
  * Dell uses its own capacity suffix:
@@ -50,12 +59,12 @@ func (c *SmcliConfig) CreateVolume(label string, size resource.Quantity) error {
 		return errors.New(msg)
 	}
 
-	glog.Infof("creating disk %s in group %s, capacity=%v\n", label, c.GetSanGroupName(), size.Value())
+	glog.Infof("creating disk %s in group %s, capacity=%v bytes\n", label, c.GetSanGroupName(), size.Value())
 
 	cmd := fmt.Sprintf(
-		"create virtualDisk diskGroup=\"%s\" userLabel=\"%s\" capacity=\"%d Bytes\"",
+		"create virtualDisk diskGroup=\"%s\" userLabel=\"%s\" capacity=%dBytes",
 		c.GetSanGroupName(),
-		label,
+		truncateDiskLabel(label),
 		size.Value())
 
 	err, _ := c.ExecuteSmcli(cmd)
@@ -66,7 +75,7 @@ func (c *SmcliConfig) CreateVolume(label string, size resource.Quantity) error {
  * Delete a volume using smcli command
  */
 func (c *SmcliConfig) DeleteVolume(label string) error {
-	cmd := fmt.Sprintf("deleting virtualdisk [\"%s\"]", label)
+	cmd := fmt.Sprintf("delete virtualdisk [\"%s\"]", truncateDiskLabel(label))
 	err, _ := c.ExecuteSmcli(cmd)
 	return err
 }
@@ -76,21 +85,30 @@ func (c *SmcliConfig) DeleteVolume(label string) error {
 func (c *SmcliConfig) ExecuteSmcli(cmd string) (error, string) {
 	glog.Infof("executing command to %s: %s\n", c.GetSanAddress(), cmd)
 
-	passOpt := ""
+	var exitCode int
+	var stdout string
+
 	if c.GetSanPassword() != "" {
-		passOpt = fmt.Sprintf("-p \"%s\"", c.GetSanPassword())
+		exitCode, stdout, _ = executeUnixCommand(
+			c.GetSmcliCommand(),
+			c.GetSanAddress(),
+			"-p",
+			c.GetSanPassword(),
+			"-c",
+			fmt.Sprintf("%s;", cmd),
+		)
+	} else {
+		exitCode, stdout, _ = executeUnixCommand(
+			c.GetSmcliCommand(),
+			c.GetSanAddress(),
+			"-c",
+			fmt.Sprintf("%s;", cmd),
+		)
 	}
 
-	exitCode, stdout, stderr := executeUnixCommand(
-		c.GetSmcliCommand(),
-		c.GetSanAddress(),
-		"-S",
-		passOpt,
-		"-c",
-		fmt.Sprintf("'%s;'", cmd))
-
 	if exitCode != 0 {
-		return errors.New(stderr), stdout
+		// Yes, smcli prints error using stdout...
+		return errors.New(stdout), stdout
 	}
 
 	return nil, stdout
