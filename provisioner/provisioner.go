@@ -44,7 +44,7 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 	)
 
 	// Effectively create the volume
-	err := p.Config.CreateVolume(
+	err, lun := p.Config.CreateVolume(
 		options.PVName,
 		options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
 	)
@@ -78,7 +78,7 @@ func (p *dellProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 					Portals:        portals,
 					IQN:            options.Parameters["iqn"],
 					ISCSIInterface: options.Parameters["iscsiInterface"],
-					Lun:            0,
+					Lun:            int32(lun),
 					ReadOnly:       getReadOnly(options.Parameters["readonly"]),
 					FSType:         getFsType(options.Parameters["fsType"]),
 				},

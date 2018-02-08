@@ -17,13 +17,18 @@ import (
 )
 
 const (
-	provisionerName           = "maupu.org/dell-provisioner"
+	provisionerName           = "nmaupu.org/dell-provisioner"
 	exponentialBackOffOnError = false
 	failedRetryThreshold      = 5
 	leasePeriod               = controller.DefaultLeaseDuration
 	retryPeriod               = controller.DefaultRetryPeriod
 	renewDeadline             = controller.DefaultRenewDeadline
 	termLimit                 = controller.DefaultTermLimit
+	defragInterval            = 86400 * time.Second
+)
+
+var (
+	defragActivated *bool
 )
 
 func Process(appName, appDesc, appVersion string) {
@@ -75,6 +80,12 @@ func commandSmcli(cmd *cli.Cmd) {
 		Value:  "/opt/dell/mdstoragemanager/client/SMcli",
 		Desc:   "Path to the smcli command",
 		EnvVar: "SMCLI_COMMAND",
+	})
+
+	defragActivated = cmd.Bool(cli.BoolOpt{
+		Name:  "d defrag",
+		Value: false,
+		Desc:  "Enable defrag sub-routine (running every 24h the following command: start diskGroup [\"<disk-group>\"] defragment;)",
 	})
 
 	cmd.Action = func() {
@@ -141,6 +152,12 @@ func execute(identifier string, provisionerConfig storage.Config) {
 		retryPeriod,
 		termLimit,
 	)
+
+	// Start defrag job if implemented
+	if *defragActivated {
+		glog.Infoln("Starting defrag job")
+		go storage.StartDefragJob(provisionerConfig, defragInterval)
+	}
 
 	// Starting the main thread
 	pc.Run(wait.NeverStop)
