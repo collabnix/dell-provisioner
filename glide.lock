@@ -1,10 +1,12 @@
-hash: 302cb71dcb823f416352cc1294fa8a2127e7a4294aa95833daa46a3356091a1a
-updated: 2018-01-31T19:00:48.20210899+01:00
+hash: 92b65d51607271f3448036e27a81f223ac684447648d6b6cb1a86d832d72841d
+updated: 2018-02-09T12:47:55.93792565+01:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
+- name: github.com/deckarep/golang-set
+  version: 1d4478f51bed434f1dadf96dcd9b43aabac66795
 - name: github.com/dghubble/sling
   version: eb56e89ac5088bebb12eef3cb4b293300f43608b
 - name: github.com/docker/distribution
@@ -38,10 +40,6 @@ imports:
   version: 02826c3e79038b59d737d3b1c0a1d937f71a4433
   subpackages:
   - lru
-- name: github.com/google/go-querystring
-  version: 53e6ce116135b80d037921a7fdd5138cf32d7a8a
-  subpackages:
-  - query
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/jawher/mow.cli
@@ -60,10 +58,6 @@ imports:
   - buffer
   - jlexer
   - jwriter
-- name: github.com/nmaupu/freenas-provisioner
-  version: de527e2b81377e5580f84860a90febcc1aea9844
-  subpackages:
-  - freenas
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/PuerkitoBio/purell

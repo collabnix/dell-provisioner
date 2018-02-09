@@ -1,5 +1,7 @@
 package: github.com/nmaupu/dell-provisioner
 import:
+  - package: github.com/deckarep/golang-set
+    version: ^1.7
   - package: github.com/jawher/mow.cli
     version: ^1.0.3
   - package: github.com/Sirupsen/logrus
