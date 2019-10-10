@@ -20,6 +20,17 @@ sudo add-apt-repository ppa:masterminds/glide && sudo apt-get update
 sudo apt-get install glide
 ```
 
+- Install go 
+
+Run the below command being on home directory
+
+```
+sudo wget https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz
+sudo tar xvf go1.13.1.linux-amd64.tar.gz
+sudo mv go /home/cse/
+```
+
+
 # Building
 
 ```
