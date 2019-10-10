@@ -9,6 +9,17 @@ Dell-provisioner is a Kubernetes external provisioner. It creates / deletes volu
 
 - Dell MD3200i
 
+# Pre-requisite
+
+- Ubuntu 18.04
+- Install make
+- Install glide
+
+```
+sudo add-apt-repository ppa:masterminds/glide && sudo apt-get update
+sudo apt-get install glide
+```
+
 # Building
 
 ```
