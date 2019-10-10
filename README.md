@@ -37,6 +37,46 @@ sudo mv go /home/cse/
 make vendor && make
 ```
 
+```
+glide install -v --strip-vcs
+[WARN]  The --strip-vcs flag is deprecated. This now works by default.
+[WARN]  The name listed in the config file (github.com/nmaupu/dell-provisioner) does not match the current location (.)
+[WARN]  Lock file may be out of date. Hash check of YAML failed. You may need to run 'update'
+[INFO]  Downloading dependencies. Please wait...
+[INFO]  --> Fetching github.com/PuerkitoBio/purell
+[INFO]  --> Fetching github.com/davecgh/go-spew
+[INFO]  --> Fetching github.com/deckarep/golang-set
+[INFO]  --> Fetching github.com/gogo/protobuf
+[INFO]  --> Fetching github.com/docker/distribution
+[INFO]  --> Fetching github.com/emicklei/go-restful
+[INFO]  --> Fetching github.com/ghodss/yaml
+[INFO]  --> Fetching github.com/go-openapi/jsonpointer
+[INFO]  --> Fetching github.com/go-openapi/jsonreference
+[INFO]  --> Fetching github.com/go-openapi/spec
+[INFO]  --> Fetching github.com/go-openapi/swag
+[INFO]  --> Fetching github.com/jawher/mow.cli
+[INFO]  --> Fetching github.com/golang/glog
+[INFO]  --> Fetching github.com/golang/groupcache
+[INFO]  --> Fetching github.com/google/gofuzz
+[INFO]  --> Fetching github.com/kubernetes-incubator/external-storage
+[INFO]  --> Fetching github.com/juju/ratelimit
+[INFO]  --> Fetching github.com/mailru/easyjson
+[INFO]  --> Fetching github.com/pborman/uuid
+[INFO]  --> Fetching github.com/dghubble/sling
+[INFO]  --> Fetching github.com/PuerkitoBio/urlesc
+[INFO]  --> Fetching github.com/Sirupsen/logrus
+[INFO]  --> Fetching github.com/spf13/pflag
+[INFO]  --> Fetching github.com/spf13/viper
+[INFO]  --> Fetching github.com/ugorji/go
+[INFO]  --> Fetching golang.org/x/net
+[INFO]  --> Fetching golang.org/x/text
+[INFO]  --> Fetching gopkg.in/inf.v0
+[INFO]  --> Fetching gopkg.in/yaml.v2
+[INFO]  --> Fetching k8s.io/apimachinery
+[INFO]  --> Fetching k8s.io/client-go
+[INFO]  --> Fetching k8s.io/kubernetes
+```
+
 Binary is located into `bin/dell-provisioner-linux-amd64`
 Building for mac OS is also possible
 
