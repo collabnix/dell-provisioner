@@ -33,6 +33,8 @@ sudo mv go /home/cse/
 
 # Building
 
+If you want to build dell-provisioner of your own, follow the below step:
+
 ```
 make vendor && make
 ```
@@ -78,7 +80,11 @@ glide install -v --strip-vcs
 ```
 
 Binary is located into `bin/dell-provisioner-linux-amd64`
-Building for mac OS is also possible
+Building for mac OS is also possible.
+
+# Available Dell Provisioner Binary
+
+You can directly download the binaries release from the Release tab
 
 # Usage
 
