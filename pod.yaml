@@ -1,0 +1,23 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: dell-provisioner
+  namespace: kube-system
+spec:
+  containers:
+    - name: dell-provisioner
+      image: ajeetraina/dell-provisioner
+      imagePullPolicy: Always
+      env:
+        - name: IDENTIFIER
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: SAN_ADDRESS
+          value: 100.98.26.95
+        - name: SAN_PASSWORD
+          value: XXXX
+        - name: SAN_GROUP_NAME
+          value: k8s
+        - name: SMCLI_COMMAND
+          value: 
