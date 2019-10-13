@@ -20,4 +20,4 @@ spec:
         - name: SAN_GROUP_NAME
           value: k8s
         - name: SMCLI_COMMAND
-          value: 
+          value: /opt/smcli/mdstoragemanager/client/SMcli
