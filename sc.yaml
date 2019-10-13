@@ -1,0 +1,14 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: dell-provisioner-sc
+provisioner: collabnix/dell-provisioner
+parameters:
+  targetPortal: 100.98.26.95:3260
+  portals: 100.98.26.116:3260,100.98.26.117:3260
+  iqn: <your-iqn>
+  volumeGroup: k8s
+  initiators: iqn.2017-04.com.example:node1
+  fsType: ext4
+  readonly: false
